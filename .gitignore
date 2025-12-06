@@ -44,3 +44,13 @@ MANIFEST
 # Environment variables
 .env
 .env.local
+
+# Data and Models
+data/
+models/
+*.h5
+*.tflite
+
+# Temporary files
+temp/
+.temp/
