@@ -14,7 +14,7 @@ class BehaviorDataLoader:
     def __init__(self, 
                  image_size=(224, 224),
                  batch_size=32,
-                 class_names=['Using Computer', 'Writing', 'Reading', 'Distracted', 'Sleepy']):
+                 class_names=['Absent', 'Using_Computer', 'Reading_Writing', 'Distracted', 'Sleepy']):
         """
         Initialize data loader
         
@@ -29,72 +29,60 @@ class BehaviorDataLoader:
         self.num_classes = len(class_names)
         
     def create_train_generator(self):
-        """Create data augmentation generator for training with letterboxing"""
-        # Custom preprocessing to apply letterboxing
-        def preprocess_letterbox(x):
-            # x comes from flow_from_directory already resized by target_size
-            # We'll handle letterboxing in the custom flow instead
-            x = x / 255.0
-            return x
-        
+        """Create data augmentation generator for training."""
         train_datagen = preprocessing.image.ImageDataGenerator(
-            preprocessing_function=preprocess_letterbox,
-            rotation_range=20,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
+            rescale=1.0/255.0,
+            rotation_range=25,
+            width_shift_range=0.25,
+            height_shift_range=0.25,
             horizontal_flip=True,
-            zoom_range=0.2,
+            zoom_range=0.25,
             shear_range=0.2,
+            channel_shift_range=20.0,
             fill_mode='nearest',
-            brightness_range=[0.8, 1.2]
+            brightness_range=[0.7, 1.3],
+            validation_split=0.2
         )
         return train_datagen
-    
+
     def create_val_generator(self):
-        """Create generator for validation with letterboxing (minimal augmentation)"""
-        def preprocess_letterbox(x):
-            x = x / 255.0
-            return x
-        
+        """Create generator for validation (no augmentation)."""
         val_datagen = preprocessing.image.ImageDataGenerator(
-            preprocessing_function=preprocess_letterbox
+            rescale=1.0/255.0,
+            validation_split=0.2
         )
         return val_datagen
-    
-    def load_from_directory(self, directory, train_split=0.8, shuffle=True):
+
+    def load_from_directory(self, directory, shuffle=True, seed=42):
         """
-        Load images from directory structure with letterboxing
+        Load images with a train/validation split using the same directory.
         Expected structure: directory/class_name/*.jpg
-        
-        Args:
-            directory: Root directory containing class subdirectories
-            train_split: Fraction of data to use for training
-            shuffle: Whether to shuffle data
-            
-        Returns:
-            (train_dataset, val_dataset)
         """
         train_datagen = self.create_train_generator()
         val_datagen = self.create_val_generator()
         
-        # Load training data with letterboxing
+        # Training subset
         train_generator = train_datagen.flow_from_directory(
             directory,
             target_size=self.image_size,
             batch_size=self.batch_size,
             class_mode='categorical',
             classes=self.class_names,
-            shuffle=shuffle
+            shuffle=shuffle,
+            subset='training',
+            seed=seed
         )
         
-        # Load validation data with letterboxing
+        # Validation subset
         val_generator = val_datagen.flow_from_directory(
             directory,
             target_size=self.image_size,
             batch_size=self.batch_size,
             class_mode='categorical',
             classes=self.class_names,
-            shuffle=False
+            shuffle=False,
+            subset='validation',
+            seed=seed
         )
         
         return train_generator, val_generator
